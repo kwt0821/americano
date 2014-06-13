@@ -1,0 +1,59 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Threading;
+using System.Diagnostics;
+
+namespace kuk_duk
+{
+    public class Worker
+    {
+        // This method will be called when the thread is started.
+        public void DoWork()
+        {
+            Form2 fm2 = new Form2();
+            if(!fm2.Created)
+                Application.Run(fm2);
+        }
+        public void DoSetUp()
+        {
+            Application.Run(new Form3());
+        }
+        public void DoCheckProcess()
+        {
+            while (true)
+            {
+                if (!Global.NetWork.IsAlive)
+                {
+                    ServerClass ServerObject = new ServerClass();
+                    Global.NetWork = new Thread(ServerObject.ServerSide);
+                    Global.NetWork.Start();
+                }
+                if (Global.rssi_min)
+                {
+                    if (!Global.Form2Thread.IsAlive)
+                    {
+                        Worker workerObject = new Worker();
+                        Global.Form2Thread = new Thread(workerObject.DoWork);
+                        Global.Form2Thread.Start();
+                    }
+                }
+                if (Global.pin_enable)
+                {
+                    MouseHook.MouseHookEnd();
+                }
+                System.Threading.Thread.Sleep(1000);
+            }
+        }
+        public void RequestStop()
+        {
+            _shouldStop = true;
+        }
+        // Volatile is used as hint to the compiler that this data
+        // member will be accessed by multiple threads.
+        private volatile bool _shouldStop;
+    }
+}
