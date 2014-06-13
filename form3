@@ -1,0 +1,90 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.IO;
+
+namespace kuk_duk
+{
+    public partial class Form3 : Form
+    {
+        public Form3()
+        {
+            InitializeComponent();
+        }
+
+        private void Form3_Load(object sender, EventArgs e)
+        {
+            //설정창 로딩시
+            Global.loading_log();
+
+            if (!Global.using_safeMode)
+            {
+                radioButton1.Checked = true;
+                radioButton2.Checked = false;
+            }
+            else
+            {
+                radioButton1.Checked = false;
+                radioButton2.Checked = true;
+                comboBox1.SelectedItem = Global.safeMode_time;
+            }
+            if (radioButton1.Checked)
+            {
+                comboBox1.Enabled = false;
+            }
+            else // radioButton2.Checked
+            {
+                comboBox1.Enabled = true;
+            }
+            
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            //절전모드 사용안함
+            comboBox1.Enabled = false;
+        }
+
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            //절전모드 사용 시
+            comboBox1.Enabled = true;
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // 몇 분 후?
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            //확인버튼
+            // 로그 저장 및 적용
+            StreamWriter sw = new StreamWriter("../../../Sharing_Resources/log.txt");
+            if (radioButton1.Checked)
+            {
+                Global.using_safeMode = false;
+                sw.WriteLine("n");
+            }
+            else // radioButton2.Checked
+            {
+                Global.using_safeMode = true;
+                Global.safeMode_time = comboBox1.SelectedItem.ToString();
+                sw.WriteLine("y/" + comboBox1.SelectedItem.ToString());
+            }
+            sw.Close();
+            Application.ExitThread();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            //취소버튼
+            Application.ExitThread();
+        }
+    }
+}
