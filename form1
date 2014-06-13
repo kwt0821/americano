@@ -1,0 +1,98 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Threading;
+using System.Diagnostics;
+
+namespace kuk_duk
+{
+    
+    public partial class Form1 : Form
+    {
+        const int WM_SYSCOMMAND = 0x0112;
+        const int SC_MONITORPOWER = 0xF170;
+        const int MONITOR_ON = -1;
+        const int MONITOR_OFF = 2;
+        const int MONITOR_STANBY = 1;
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Size si = SystemInformation.PrimaryMonitorSize;
+
+            int nWidth = si.Width;
+            int nHeight = si.Height;
+
+            this.Location = new Point(nWidth - this.Width+40, nHeight - this.Height-40);
+
+            this.TopMost = true;
+
+            notifyIcon1.ContextMenuStrip = contextMenuStrip1;
+
+            ServerClass ServerObject = new ServerClass();
+            Global.NetWork = new Thread(ServerObject.ServerSide);
+            Global.NetWork.Start();
+
+            Worker workerObject = new Worker();
+            Global.Form2Thread = new Thread(workerObject.DoWork);
+            Global.Form2Thread.Start();
+
+            Thread CheckProcess = new Thread(workerObject.DoCheckProcess);
+            CheckProcess.Start();
+        }
+        
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Monitor OFF
+            ServerClass.flag = false;
+            Global.monitor_off = true;
+            Global.rssi_min = true;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            // Sleep Mode
+            ServerClass.flag = false;
+            Global.monitor_off = true;
+            Global.rssi_min = true;
+            Application.SetSuspendState(PowerState.Hibernate, false, false);
+        }
+
+        private void notifyIcon1_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            this.Visible = true;  //notifyicon 더블 클릭시에 해당 어플리케이션을 보여준다. 
+            if (this.WindowState == FormWindowState.Minimized)
+                this.WindowState = FormWindowState.Normal; // 최소화를 멈춘다 
+            this.Activate(); // 폼을 활성화 시킨다
+        }
+
+        private void 설정ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Worker workerObject = new Worker();
+            Thread setup = new Thread(workerObject.DoSetUp);
+            setup.Start();
+        }
+
+        private void frmForm1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true;
+            this.Visible = false;
+            //System.Windows.Forms.MessageBox.Show("" + Global.using_safeMode + " " + Global.safeMode_time);
+        }
+            
+        
+    }
+}
