@@ -1,0 +1,127 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace kuk_duk
+{
+    public partial class Form2 : Form
+    {
+        const int WM_SYSCOMMAND = 0x0112;
+        const int SC_MONITORPOWER = 0xF170;
+        const int MONITOR_ON = -1;
+        const int MONITOR_OFF = 2;
+        const int MONITOR_STANBY = 1;
+        bool timer1_check;
+        bool timer2_check;
+        private Object thisLock = new Object();
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);
+
+        public Form2()
+        {
+            InitializeComponent();
+        }
+
+        private void Form2_Load(object sender, EventArgs e)
+        {
+            Size si = SystemInformation.PrimaryMonitorSize;
+
+            int nWidth = si.Width;
+            int nHeight = si.Height;
+
+            textBox1.Location = new Point(nWidth-270, nHeight-135);
+            button1.Location = new Point(nWidth-115, nHeight-135);
+            
+            // 잠금 화면
+            KeyHook.set_register();
+            KeyHook.RegisterHook();
+            KeyHook.KillCtrlAltDelete();
+            MouseHook.set_regist();
+            MouseHook.MouseHookStart();
+
+            // full screen
+            this.Width = Screen.PrimaryScreen.Bounds.Width;
+            this.Height = Screen.PrimaryScreen.Bounds.Height;
+            this.Location = new Point(0, 0);
+
+            Image im = Image.FromFile("../../../Sharing_Resources/elsa4.jpg");
+            this.BackgroundImage = im;
+            this.BackgroundImageLayout = ImageLayout.Stretch;
+
+            // top most
+            this.TopMost = true;
+
+            timer2.Enabled = true;
+
+            // Cursor Hide
+            //Cursor.Hide();
+
+            //if(Global.monitor_off)
+                //SendMessage(this.Handle.ToInt32(), WM_SYSCOMMAND, SC_MONITORPOWER, MONITOR_OFF);
+        }
+
+        private void Form2_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            KeyHook.EnableCtrlAltDel();
+            MouseHook.MouseHookEnd();
+            KeyHook.UnregisterHook();
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            // 밀리초 단위
+            // 1초 = 1000밀리초
+            // 1분 = 60초 = 60000밀리초
+            // 10분 = 600초 = 600000밀리초
+
+            timer1.Enabled = false;
+            if (!timer1_check && Global.using_safeMode)
+            {
+                //System.Windows.Forms.MessageBox.Show("start safe mode");
+                timer1_check = true;
+                //Global.WebClient("safe_mode");
+                //Application.SetSuspendState(PowerState.Hibernate, false, false);
+            }
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+
+            timer2.Enabled = false;
+            if (Global.rssi_min && !timer2_check)
+            {
+                Global.rssi_min = false;
+                Global.monitor_off = true;
+                timer2_check = true;
+                if (Global.using_safeMode)
+                {
+                    timer1.Interval = ((Int32.Parse(Global.safeMode_time)) * 10000) + 1;
+                    timer1.Enabled = true;
+                }
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (textBox1.Text == Global.pin_str)
+            {
+                Global.pin_flag = false;
+                KeyHook.UnregisterHook();
+                KeyHook.EnableCtrlAltDel();
+                Global.pin_str = null;
+                
+                if (Global.Form2Thread.IsAlive)
+                    Application.ExitThread(); 
+            }
+        }
+    }
+}
