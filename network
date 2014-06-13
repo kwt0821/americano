@@ -1,0 +1,91 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Net;
+using System.Net.Sockets;
+using System.IO;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+namespace kuk_duk
+{
+    class ServerClass
+    {
+        public static bool flag;
+        public static Socket Server, Client;
+        public const int sPort = 8011;
+        protected static readonly Object this_lock = new Object();
+
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);
+
+        public void ServerSide()
+        {
+            IPAddress serverIP = IPAddress.Parse("222.111.164.242");
+            IPEndPoint serverEndPoint = new IPEndPoint(serverIP, sPort);
+
+            Server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            Server.Bind(serverEndPoint);
+            Server.Listen(10);
+
+            while (true)
+            {
+                Client = Server.Accept();
+
+                lock (this_lock)
+                {
+                    NetworkStream ns = new NetworkStream(Client);
+
+                    StreamReader sr = new StreamReader(ns);
+                    String str = sr.ReadLine();
+                    if (str == "LOCK" && flag)
+                    {
+                        //Global.monitor_off = true;
+                        Global.rssi_min = true;
+                        flag = false;
+                        StreamWriter sw = new StreamWriter(ns);
+                        sw.WriteLine("C# : RSSI_min completion");
+                        sw.Flush();
+                    }
+                    else if (str == "UNLOCK" && !flag)
+                    {
+                        
+                        //Global.nfc_join = true;
+                        if (Global.Form2Thread.IsAlive)
+                            Global.Form2Thread.Abort();
+                        KeyHook.EnableCtrlAltDel();
+                        MouseHook.MouseHookEnd();
+                        KeyHook.UnregisterHook();
+                        flag = true;
+                        //Global.WebClient("nfc_join");
+                        StreamWriter sw = new StreamWriter(ns);
+                        sw.WriteLine("C# : NFC_join completion");
+                        sw.Flush();
+                    }
+                    else if (str.IndexOf("PIN&", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Global.pin_enable = true;
+                        string[] temp;
+                        temp = str.Split('&');
+                        if (temp[0] == "PIN")
+                        {
+                            Global.pin_str = temp[1];
+                            flag = true;
+                        }
+                        StreamWriter sw = new StreamWriter(ns);
+                        sw.WriteLine("C# : PIN completion");
+                        sw.Flush();
+                    }
+                    else
+                    {
+                        StreamWriter sw = new StreamWriter(ns);
+                        sw.WriteLine("C# : Wrong Data");
+                        sw.Flush();
+                    }
+                }
+                System.Threading.Thread.Sleep(1500);
+            }
+        }
+    }
+}
